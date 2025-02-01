@@ -44,18 +44,21 @@ def generate_response():
         flash(validation_error, 'error')
         return render_template('index.html', email_content=data.get('email_content', '').strip())
 
-    # Primeiro classifica o email
+    # Primeiro classifica o email, para evitar casos onde não tem classificação
     classification_result = EmailClassifier.classify_email(
         data['email_content'])
     if 'error' in classification_result:
         flash(classification_result['error'], 'error')
         return render_template('index.html', email_content=data['email_content'])
+    
+    personality = data.get('personality', '').strip() or 'Seja formal e educado'
 
     # Gera a resposta
     generated_response = ResponseGenerator.generate_response(
         email_content=data['email_content'],
-        personality=data['personality'],
-        temperature=float(data.get('temperature', 0.7))
+        personality=personality,
+        temperature=float(data.get('temperature', 0.3)),
+        category=data.get('category', classification_result['label'])
     )
 
     return render_template(
@@ -125,16 +128,16 @@ def validate_response_params(dados: dict) -> str:
     if not validate_email_content(conteudo_email):
         return 'Por favor, forneça o conteúdo do e-mail.'
 
-    personalidade = dados.get('personality', '').strip()
-    if not personalidade:
-        return 'Por favor, forneça uma descrição da personalidade.'
+    #personalidade = dados.get('personality', '').strip()
+    #if not personalidade:
+    #    return 'Por favor, forneça uma descrição da personalidade.'
 
-    temperatura = dados.get('temperature', 0.7)
-    try:
-        temperatura = float(temperatura)
-        if not 0 <= temperatura <= 1:
-            return 'Temperatura deve estar entre 0 e 1.'
-    except (ValueError, TypeError):
-        return 'Valor de temperatura inválido.'
+     #temperatura = dados.get('temperature', 0.7)
+    #try:
+    #    temperatura = float(temperatura)
+    #    if not 0 <= temperatura <= 1:
+    #        return 'Temperatura deve estar entre 0 e 1.'
+    #except (ValueError, TypeError):
+     #   return 'Valor de temperatura inválido.'
 
     return ''

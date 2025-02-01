@@ -72,6 +72,7 @@
                             <h3>Gerar uma Resposta Automática Personalizada</h3>
                             
                             <input type="hidden" name="email_content" value="{{ email_content }}">
+                            <input type="hidden" name="category" value="{{ classification_result.label }}">
                             
                             <div class="form-group">
                                 <label for="personality">
@@ -80,7 +81,7 @@
                                 <textarea 
                                     name="personality" 
                                     id="personality" 
-                                    placeholder="Descreva o estilo da resposta (Exemplo: 'Seja formal e profissional', 'Seja empático', etc.)"></textarea>
+                                    placeholder="Descreva o estilo da resposta (Exemplo: 'Seja formal e profissional', 'Seja empático', etc.) Padrão: 'Seja formal e educado'."></textarea>
                             </div>
                             
                             <div class="form-group">

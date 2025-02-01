@@ -13,7 +13,7 @@ class ResponseGenerator:
     MODEL = "gpt-4o-mini"
 
     @staticmethod
-    def generate_response(email_content: str, personality: str, temperature: float) -> Optional[str]:
+    def generate_response(email_content: str, personality: str, temperature: float, category: str) -> Optional[str]:
         """
         Gera uma resposta automática para o email, gerada pelo modelo GPT-4o mini da OpenAI.
 
@@ -28,17 +28,26 @@ class ResponseGenerator:
 
         api_key = current_app.config.get('OPENAI_API_KEY')
         if not api_key:
-            current_app.logger.error("Chave da API OpenAI não configurada.")
+            current_app.logger.error('Chave da API OpenAI não configurada.')
             return get_user_message('auth_error')
+        
 
-        headers = {"Authorization": f"Bearer {api_key}"}
+        system_prompt = (
+                f"Você é um assistente que responde emails. '{personality}'\n"
+                f"Este é um email classificado como '{category}'. "
+                "Gere uma resposta apropriada considerando esta classificação."
+            )
+        
+
+
+        headers = {'Authorization': f'Bearer {api_key}'}
         payload = {
-            "model": ResponseGenerator.MODEL,
-            "messages": [
-                {"role": "system", "content": personality},
-                {"role": "user", "content": f"Gere uma resposta para este email:\n\n{email_content}"}
+            'model': ResponseGenerator.MODEL,
+            'messages': [
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': f'Gere uma resposta para este email:\n\n{email_content}'}
             ],
-            "temperature": temperature
+            'temperature': temperature
         }
 
         try:
@@ -53,25 +62,25 @@ class ResponseGenerator:
                 return response.json()['choices'][0]['message']['content']
 
             elif response.status_code == 429:
-                current_app.logger.warning("Limite de requisições OpenAI.")
+                current_app.logger.warning('Limite de requisições OpenAI.')
                 return get_user_message('rate_limit')
 
             elif response.status_code == 401:
-                current_app.logger.error("Falha na autenticação da OpenAI.")
+                current_app.logger.error('Falha na autenticação da OpenAI.')
                 return get_user_message('auth_error')
 
             else:
-                current_app.logger.error(f"Erro na API da OpenAI: {response.status_code}")
+                current_app.logger.error(f'Erro na API da OpenAI: {response.status_code}')
                 return get_user_message('api_unavailable')
 
         except requests.exceptions.ConnectionError:
-            current_app.logger.error("Erro de conexão com a OpenAI.")
+            current_app.logger.error('Erro de conexão com a OpenAI.')
             return get_user_message('connection_error')
 
         except requests.exceptions.Timeout:
-            current_app.logger.error("Tempo de resposta da OpenAI expirou.")
+            current_app.logger.error('Tempo de resposta da OpenAI expirou.')
             return get_user_message('timeout')
 
         except Exception as e:
-            current_app.logger.error(f"Erro inesperado com a OpenAI: {str(e)}")
+            current_app.logger.error(f'Erro inesperado com a OpenAI: {str(e)}')
             return get_user_message('unexpected_error')
