@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente de E-mails</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-envelope"></i> Assistente Inteligente de E-mails</h1>
+            <p class="subtitle"> Melhore a sua produtividade ao classificar e gerar melhores respostas!</p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-info-circle"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <form method="POST" action="{{ url_for('main.classify_email') }}" class="email-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="email_content">
+                        <i class="fas fa-pen"></i> Insira o conteúdo do email:
+                    </label>
+                    <textarea 
+                        name="email_content" 
+                        id="email_content" 
+                        placeholder="Cole aqui o conteúdo do seu e-mail...">{{ email_content }}</textarea>
+                </div>
+
+                <div class="form-group file-input-group">
+                    <label for="email_file">
+                        <i class="fas fa-file-upload"></i> Ou selecione um arquivo para enviar!
+                    </label>
+                    <div class="file-input-wrapper">
+                        <input 
+                            type="file" 
+                            name="email_file" 
+                            id="email_file" 
+                            accept=".txt,.pdf,.eml"
+                        >
+                        <small class="file-info">Formatos suportados: .txt, .pdf, .eml</small>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn primary">
+                    <i class="fas fa-search"></i> Analisar o e-mail
+                </button>
+            </form>
+
+            {% if classification_result %}
+                <form method="POST" action="{{ url_for('main.generate_response') }}" class="response-form">
+                    <div class="result-section">
+                        <div class="classification-badge 
+                            {% if classification_result.label == 'Produtivo' %}productive{% else %}unproductive{% endif %}">
+                            <i class="fas fa-tag"></i>
+                            {{ classification_result.label }}
+                            <span class="confidence">{{ classification_result.confidence }}% de confiança</span>
+                        </div>
+                        
+                        <div class="response-section">
+                            <h3>Gerar uma Resposta Automática Personalizada</h3>
+                            
+                            <input type="hidden" name="email_content" value="{{ email_content }}">
+                            
+                            <div class="form-group">
+                                <label for="personality">
+                                    Personalidade da Resposta
+                                </label>
+                                <textarea 
+                                    name="personality" 
+                                    id="personality" 
+                                    placeholder="Descreva o estilo da resposta (Exemplo: 'Seja formal e profissional', 'Seja empático', etc.)"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="temperature">
+                                    <i class="fas fa-sliders-h"></i> Nível de Criatividade da Resposta
+                                </label>
+                                <div class="temperature-selector">
+                                    <select name="temperature" id="temperature">
+                                        <option value="0.1">Conservador</option>
+                                        <option value="0.3" selected>Equilibrado</option>
+                                        <option value="0.5">Criativo</option>
+                                        <option value="0.7">Muito Criativo</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn secondary">
+                                <i class="fas fa-magic"></i> Gerar Resposta
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+            
+            {% if generated_response %}
+                <div class="result-section response-result">
+                    <h3><i class="fas fa-check-circle"></i> Resposta Gerada</h3>
+                    <div class="response-container">
+                        <textarea class="generated-response" readonly>{{ generated_response }}</textarea>
+                        <button type="button" class="btn copy-btn" onclick="copyResponse()">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <footer class="footer">
+            <p>
+                <i class="fas fa-code"></i> Desenvolvido por <a href="https://github.com/hadson0" target="_blank">Hadson Barbosa.</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+
+        // Botão de copiar a resposta geradaa
+        function copyResponse() {
+            const responseText = document.querySelector('.generated-response');
+            responseText.select();
+            document.execCommand('copy');
+            
+            const copyBtn = document.querySelector('.copy-btn');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        }
+
+        // O texto do arquivo é carregado para o input
+        document.getElementById('email_file').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('file', file);
+        
+                try {
+                    const response = await fetch('/process-file', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('email_content').value = data.content;
+                    } else {
+                        alert(data.error);
+                    }
+                } catch (error) {
+                    alert('Erro ao processar arquivo');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
